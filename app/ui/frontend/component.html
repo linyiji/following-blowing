@@ -1,0 +1,243 @@
+<div class="ai-ip-brand-root">
+<div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<div class="container">
+  <div class="page-header">
+    <div class="api-settings-toolbar" aria-label="API 配置">
+      <span class="api-connection-status not-configured" id="apiConnectionStatus" role="status">● API 未配置</span>
+      <button type="button" class="secondary api-settings-button" id="apiSettingsBtn" aria-haspopup="dialog" aria-controls="apiSettingsBackdrop">⚙ API 设置</button>
+    </div>
+    <h1>Following blowing</h1>
+    <p>AI IP × Brand 联名设计 · Workflow Agent</p>
+    <div class="run-status-strip" id="runStatusStrip" aria-label="运行与 Provider 状态">
+      <span class="run-mode-badge" id="runModeBadge">STATUS</span>
+      <span id="runIdStatus">No active run</span>
+      <span id="runStartedStatus">Not started</span>
+      <span id="providerModeStatus">Providers: unknown</span>
+      <span id="searchModeStatus">Search: unknown</span>
+      <span id="imageModeStatus">Image: unverified</span>
+    </div>
+    <div class="ai-services" id="aiServices" aria-label="AI Services 状态">
+      <span class="ai-services-title">AI Services</span>
+      <span>Fast <strong id="fastServiceStatus">NOT CONFIGURED</strong></span>
+      <span>Main <strong id="mainServiceStatus">NOT CONFIGURED</strong></span>
+      <span>Image <strong id="imageServiceStatus">NOT CONFIGURED</strong></span>
+      <span>Search <strong id="searchServiceStatus">DEMO / MOCK</strong></span>
+    </div>
+  </div>
+
+  <section class="section">
+    <h2>1. 用户输入</h2>
+    <p class="section-sub">先提供固定IP与品牌参考，再通过“多选目标 + 自由输入 + AI补充”形成创意Brief。用户设定始终优先。</p>
+
+    <div class="inputs">
+      <div class="asset-box">
+        <h3>IP形象</h3>
+        <div class="preview" id="ipPreview" role="button" tabindex="0" aria-label="加载或上传IP图片" aria-controls="ipFileInput">
+          <div class="tip" id="ipTip">点击加载IP图片<br><small>建议使用主体清晰、背景干净的参考图；复杂背景也可由系统预处理。</small></div>
+          <img id="ipImg" alt="IP形象" style="display:none">
+        </div>
+        <input class="visually-hidden" id="ipFileInput" type="file" accept="image/png,image/jpeg,image/webp" tabindex="-1">
+        <div class="asset-caption">线条小狗（固定IP）</div>
+      </div>
+
+      <div class="asset-box">
+        <h3>品牌形象</h3>
+        <div class="preview" id="brandPreview" role="button" tabindex="0" aria-label="加载或上传品牌图片" aria-controls="brandFileInput">
+          <div class="tip" id="brandTip">点击加载品牌图片<br><small>系统会从品牌图中继续拆解Logo、颜色、制服、产品与场景等元素。</small></div>
+          <img id="brandImg" alt="品牌形象" style="display:none">
+        </div>
+        <input class="visually-hidden" id="brandFileInput" type="file" accept="image/png,image/jpeg,image/webp" tabindex="-1">
+        <div class="asset-caption">麦当劳品牌（多品牌特征）</div>
+      </div>
+    </div>
+
+    <div class="goal-panel">
+      <h3>明确用户目标</h3>
+      <div class="help">支持多选。多选时 Creative Brief Agent 会理解主次关系，并结合你的文字继续补全，而不是把所有选项机械堆叠。</div>
+      <div class="option-grid" id="goalOptions">
+        <div class="goal-option" data-value="服装融合" role="checkbox" aria-checked="false" tabindex="0">服装融合</div>
+        <div class="goal-option" data-value="帽子 / 头饰" role="checkbox" aria-checked="false" tabindex="0">帽子 / 头饰</div>
+        <div class="goal-option" data-value="品牌Logo" role="checkbox" aria-checked="false" tabindex="0">品牌 Logo</div>
+        <div class="goal-option" data-value="品牌配色" role="checkbox" aria-checked="false" tabindex="0">品牌配色</div>
+        <div class="goal-option" data-value="产品元素" role="checkbox" aria-checked="false" tabindex="0">产品元素</div>
+        <div class="goal-option" data-value="场景融合" role="checkbox" aria-checked="false" tabindex="0">场景融合</div>
+        <div class="goal-option" data-value="联名故事" role="checkbox" aria-checked="false" tabindex="0">联名故事</div>
+        <div class="goal-option" data-value="周边应用" role="checkbox" aria-checked="false" tabindex="0">周边应用</div>
+      </div>
+      <textarea id="goalText" placeholder="补充你的创意想法，例如：希望线条小狗像麦当劳的新员工，整体仍保持原本极简线条感，只通过制服、帽子和局部M元素体现品牌。"></textarea>
+      <div class="action-row">
+        <button type="button" class="blue" id="aiSupplementBtn">✦ AI 补充创意</button>
+        <button type="button" class="secondary" id="clearGoalBtn">清空目标</button>
+      </div>
+      <div class="ai-suggestion" id="aiSuggestion">
+        <h4>✦ AI 补充建议</h4>
+        <ul id="aiSuggestionList"></ul>
+        <div class="action-row">
+          <button type="button" id="adoptSuggestionBtn">采用建议</button>
+          <button type="button" class="secondary" id="regenerateSuggestionBtn">重新生成</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="action-row workflow-launch-actions" style="margin-top:22px">
+      <button type="button" id="startBtn">🚀 启动 AI Workflow</button>
+      <button type="button" class="blue" id="configureApiBtn">配置 API</button>
+      <button type="button" class="secondary" id="useDemoBtn">使用 Demo</button>
+      <span class="provider-gate-hint" id="providerGateHint" role="status">请先配置 API，或使用 Demo 演示。</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>2. Agent Workflow 自动调度</h2>
+    <p class="workflow-copy">用户只触发一次，系统按 12-Agent Workflow 自动调度。中间区域始终只有一个：启动前显示 Ready，运行中显示当前 Agent 并向左滑出，全部完成后原区域一次性替换为 3 列 × 4 行完成卡片。</p>
+
+    <div class="workflow-stage" id="workflowStage">
+      <div class="ready-card">
+        <h3>AI Workflow Ready</h3>
+        <p>等待输入完成并启动Agent调度</p>
+      </div>
+    </div>
+    <div class="workflow-footer">完成后点击任意Agent卡片，可查看该Agent的输入、处理摘要、分支逻辑与输出。</div>
+  </section>
+
+  <section class="section result" id="resultSection">
+    <h2>3. 最终联名结果</h2>
+    <p class="section-sub">只有通过 IP Guardian Agent 的方案才会进入 Ranking，并最终输出到这里。</p>
+
+    <div class="result-layout">
+      <div class="result-visual">
+        <img class="final-result-image" src="" alt="线条小狗 × 麦当劳最终联名结果">
+      </div>
+      <div class="result-info">
+        <h3 id="resultTitle">线条小狗 × 麦当劳 · 快乐值班员</h3>
+        <p id="resultDescription">融合策略以“服装与帽子”为主要品牌载体，M形识别与红黄配色作为辅助，不改变线条小狗的核心头部、耳朵、面部和线条语言。当前结果图已替换为经过IP身份约束后的联名生成示例：保留线条小狗的核心轮廓、耳朵与面部结构，并通过麦当劳员工帽、围裙、红黄配色和产品元素完成品牌融合。</p>
+
+        <div class="tags" id="resultTags">
+          <span class="tag">服装融合</span><span class="tag">品牌识别</span><span class="tag">IP Identity Grammar</span><span class="tag">Pose-Aware Guardian Pass</span>
+        </div>
+
+        <div class="score-card">
+          <div class="score-total" id="scoreTotal">综合评分 93 / 100</div>
+          <div class="score-list" id="scoreList">
+            <div class="score-row"><span>用户目标匹配</span><span>95</span></div>
+            <div class="score-row"><span>IP身份一致性</span><span>92</span></div>
+            <div class="score-row"><span>品牌识别度</span><span>91</span></div>
+            <div class="score-row"><span>融合自然度</span><span>92</span></div>
+            <div class="score-row"><span>商业应用价值</span><span>90</span></div>
+          </div>
+          <div class="score-reasons" id="scoreReasons"></div>
+        </div>
+
+        <button type="button" class="export-btn" id="exportBtn">📦 导出联名设计内容包</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="modal-backdrop api-settings-backdrop" id="apiSettingsBackdrop" aria-hidden="true">
+  <div class="modal api-settings-modal" role="dialog" aria-modal="true" aria-labelledby="apiSettingsTitle" aria-describedby="apiSettingsSubtitle" tabindex="-1">
+    <div class="modal-head">
+      <div>
+        <div class="api-product-name">Following blowing</div>
+        <h3 id="apiSettingsTitle">API 设置</h3>
+        <div id="apiSettingsSubtitle" class="agent-cn">BYOK · 您的密钥不会显示在主页或工作流中。</div>
+      </div>
+      <button type="button" class="close-btn" id="closeApiSettingsBtn" aria-label="关闭 API 设置">关闭</button>
+    </div>
+
+    <form id="apiSettingsForm" class="api-settings-form" autocomplete="off">
+      <div class="api-form-grid">
+        <label class="api-field">
+          <span>Provider</span>
+          <select id="apiProvider" name="provider">
+            <option value="openai_compatible">OpenAI Compatible</option>
+            <option value="openai">OpenAI</option>
+          </select>
+        </label>
+        <label class="api-field">
+          <span>Provider Preset</span>
+          <select id="apiPreset" name="preset">
+            <option value="custom">Custom OpenAI Compatible</option>
+            <option value="teamorouter">TeamoRouter</option>
+          </select>
+        </label>
+        <label class="api-field api-field-wide">
+          <span>Base URL</span>
+          <input id="apiBaseUrl" name="base_url" type="url" inputmode="url" placeholder="https://api.example.com/v1" autocomplete="url" spellcheck="false">
+        </label>
+        <label class="api-field api-field-wide">
+          <span>API Key</span>
+          <input id="apiKeyInput" name="api_credential" type="password" placeholder="输入新的 API Key" autocomplete="new-password" autocapitalize="off" spellcheck="false" aria-describedby="apiKeyHint">
+          <small id="apiKeyHint">密钥只会通过本次安全操作发送；再次打开时不会回显。</small>
+        </label>
+        <label class="api-field">
+          <span>Fast Model</span>
+          <input id="apiFastModel" name="fast_model" type="text" value="gpt-5.6-luna" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="api-field">
+          <span>Main Model</span>
+          <input id="apiMainModel" name="main_model" type="text" value="gpt-5.6-terra" autocomplete="off" spellcheck="false">
+        </label>
+        <label class="api-field api-field-wide">
+          <span>Image Model</span>
+          <input id="apiImageModel" name="image_model" type="text" value="gpt-image-2" autocomplete="off" spellcheck="false">
+        </label>
+      </div>
+
+      <details class="api-advanced" id="apiAdvancedSettings">
+        <summary>Advanced · Timeouts</summary>
+        <div class="api-timeout-grid">
+          <label class="api-field">
+            <span>Fast Timeout (s)</span>
+            <input id="apiFastTimeout" name="fast_timeout" type="number" min="1" max="3600" step="1" value="60" inputmode="numeric">
+          </label>
+          <label class="api-field">
+            <span>Main Timeout (s)</span>
+            <input id="apiMainTimeout" name="main_timeout" type="number" min="1" max="3600" step="1" value="120" inputmode="numeric">
+          </label>
+          <label class="api-field">
+            <span>Image Timeout (s)</span>
+            <input id="apiImageTimeout" name="image_timeout" type="number" min="1" max="3600" step="1" value="180" inputmode="numeric">
+          </label>
+        </div>
+        <div class="advanced-image-test-row">
+          <span>普通“测试连接”不会生成图像。下方操作会发起一次可能收费的图像测试。</span>
+          <button type="button" class="secondary" id="advancedImageTestBtn">高级图像测试（可能收费）</button>
+        </div>
+      </details>
+
+      <div class="api-credential-note" id="apiCredentialNote" role="status">尚未保存安全凭据。</div>
+      <div class="api-connection-result" id="apiConnectionResult" role="status" aria-live="polite"></div>
+
+      <div class="api-settings-actions">
+        <button type="button" class="blue" id="testApiConnectionBtn">测试连接</button>
+        <button type="submit" id="saveApiSettingsBtn">保存设置</button>
+        <button type="button" class="secondary" id="cancelApiSettingsBtn">取消</button>
+        <button type="button" class="danger-quiet" id="deleteApiCredentialsBtn">删除 API 凭据</button>
+      </div>
+
+      <div class="delete-credential-confirm" id="deleteCredentialConfirm" hidden>
+        <p>删除后 Following blowing 将无法使用真实 AI，直到重新配置。</p>
+        <div class="action-row">
+          <button type="button" class="danger" id="confirmDeleteApiCredentialsBtn">确认删除</button>
+          <button type="button" class="secondary" id="cancelDeleteApiCredentialsBtn">保留凭据</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+    <div class="modal-head">
+      <div>
+        <h3 id="modalTitle"></h3>
+        <div id="modalSubtitle" class="agent-cn"></div>
+      </div>
+      <button type="button" class="close-btn" id="closeModalBtn">关闭</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+</div>

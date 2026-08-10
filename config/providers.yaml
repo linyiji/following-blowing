@@ -1,0 +1,35 @@
+application:
+  app_name: Following blowing
+  competition_mode: true
+  search_provider_verified: false
+  multi_reference_image_edit: false
+  multi_reference_image_edit_verified: false
+
+multimodal:
+  provider: demo
+  base_url: null
+  model: null
+  timeout: 120
+
+models:
+  fast: gpt-5.6-luna
+  main: gpt-5.6-terra
+  image: gpt-image-2
+
+image:
+  provider: demo
+  base_url: null
+  model: gpt-image-2
+  timeout: 180
+
+search:
+  provider: demo
+  base_url: null
+  model: null
+  timeout: 120
+
+document:
+  parser: local
+
+# Credentials never belong in this file. Use environment variables or
+# .streamlit/secrets.toml / Streamlit Community Cloud secrets.

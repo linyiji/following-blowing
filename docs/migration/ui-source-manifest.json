@@ -1,0 +1,30 @@
+{
+  "source_filename": "AI_IP_Brand_Workflow_Comprehensive_v7_ResultUpdated.html",
+  "source_sha256": "50b4cc8e3b96084f3b516389558d0900c86bfa592e59be451c576d27e4d47e16",
+  "source_bytes": 2070468,
+  "html_structure_chars": 4674,
+  "css_chars": 8510,
+  "embedded_assets": [
+    {
+      "filename": "final_result.png",
+      "bytes": 1258313,
+      "sha256": "f67ed7662aaff9927e0378a6f66db12c88efde3abb76756b8d8ed02e77f6f7bd"
+    },
+    {
+      "filename": "ip_reference.jpg",
+      "bytes": 12402,
+      "sha256": "ed5801991769a4d4a51916cde67c80b37dc4062d57d351651bf63f022bb8501d"
+    },
+    {
+      "filename": "brand_reference.jpg",
+      "bytes": 24743,
+      "sha256": "80bad18d3a4ccc92be4da556123dd041f02903e94ca75c0e9605bf8a8d06a27e"
+    },
+    {
+      "filename": "guardian_rejected.jpg",
+      "bytes": 233827,
+      "sha256": "9462d3762ae22435c3a12fa073109252d1b3e8f3155039e7dd5712ac7bee67e2"
+    }
+  ],
+  "runtime_depends_on_source": false
+}
