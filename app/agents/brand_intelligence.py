@@ -36,6 +36,7 @@ class BrandIntelligenceAgent(BaseAgent[BrandProfile]):
             prompt=f"{self.prompt_text}\n\nRuntime brand label: {brand_name}",
             response_model=BrandProfile,
             model_role="main",
+            image_detail="auto",
             demo_output=demo_output.model_dump(mode="json"),
         )
         if not isinstance(output, BrandProfile):

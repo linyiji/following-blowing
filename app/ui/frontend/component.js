@@ -20,7 +20,9 @@ const TRIGGER_NAMES = new Set([
   "export_package",
   "retry_agent",
   "open_api_settings",
+  "test_api_connection_with_credential",
   "test_api_connection",
+  "save_api_settings_with_credential",
   "save_api_settings",
   "delete_api_credentials",
   "close_api_settings",
@@ -566,7 +568,7 @@ export default function(component) {
     showToast(notificationMessage);
   }
 
-  const emitTrigger = (name, payload = {}) => {
+  const emitTrigger = (name, payload = {}, options = {}) => {
     if (!TRIGGER_NAMES.has(name)) return;
     const event = {
       event_id: triggerId(componentKey, name, runtime),
@@ -577,7 +579,8 @@ export default function(component) {
       emitted_at: new Date().toISOString(),
       ...payload,
     };
-    setTriggerValue(name, event);
+    if (options.stateKey) setStateValue(options.stateKey, event);
+    else setTriggerValue(name, event);
   };
 
   const timeoutValue = (value, fallback) => {
@@ -790,9 +793,14 @@ export default function(component) {
       advanced_image_test: advancedImageTest,
       ...(apiKey ? { credential_input: apiKey } : {}),
     };
-    if (currentCredentialInput) currentCredentialInput.value = "";
-    pendingCredentials.delete(String(componentKey || "component"));
     return payload;
+  };
+  const clearCredentialAfterAction = () => {
+    // Components v2 can briefly keep an old renderer listener alive while its
+    // replacement mounts. All listeners for one DOM action must read the same
+    // one-shot value. Clear only after the current event dispatch completes,
+    // so a duplicate listener cannot overwrite the trigger with an empty key.
+    globalThis.setTimeout(clearCredentialInput, 250);
   };
 
   const openApiSettings = () => {
@@ -843,7 +851,12 @@ export default function(component) {
   const testApiConnection = (advancedImageTest, sourceElement) => {
     if (!apiSettingsForm?.reportValidity()) return;
     const payload = apiSettingsPayload(advancedImageTest, sourceElement);
-    emitTrigger("test_api_connection", payload);
+    emitTrigger(
+      payload.credential_input
+        ? "test_api_connection_with_credential"
+        : "test_api_connection",
+      payload,
+    );
     if (apiResultPanel) {
       apiResultPanel.className = "api-connection-result show testing";
       apiResultPanel.textContent = advancedImageTest
@@ -853,14 +866,23 @@ export default function(component) {
   };
   listen(query("#testApiConnectionBtn"), "click", (event) => {
     testApiConnection(false, event.currentTarget);
+    clearCredentialAfterAction();
   });
   listen(query("#advancedImageTestBtn"), "click", (event) => {
     testApiConnection(true, event.currentTarget);
+    clearCredentialAfterAction();
   });
   listen(apiSettingsForm, "submit", (event) => {
     event.preventDefault();
     if (!apiSettingsForm.reportValidity()) return;
-    emitTrigger("save_api_settings", apiSettingsPayload(false, event.currentTarget));
+    const payload = apiSettingsPayload(false, event.currentTarget);
+    emitTrigger(
+      payload.credential_input
+        ? "save_api_settings_with_credential"
+        : "save_api_settings",
+      payload,
+    );
+    clearCredentialAfterAction();
     showToast("API 设置已提交安全保存");
   });
 
@@ -969,6 +991,16 @@ export default function(component) {
     panel.classList.toggle("show", items.length > 0);
   };
   renderSuggestion(stateValue("ai_suggestion"));
+  const adoptSuggestionButton = query("#adoptSuggestionBtn");
+  const suggestionAdopted = booleanValue(firstDefined(
+    data.ai_suggestion_adopted,
+    stateData.ai_suggestion_adopted,
+    false,
+  ));
+  if (adoptSuggestionButton) {
+    adoptSuggestionButton.disabled = suggestionAdopted;
+    adoptSuggestionButton.textContent = suggestionAdopted ? "✓ 已采用" : "采用建议";
+  }
 
   const syncIntentState = () => {
     const currentText = goalText ? goalText.value : runtime.goalText;
@@ -978,49 +1010,37 @@ export default function(component) {
     return { selected_goals: [...runtime.selectedGoals], goal_text: currentText };
   };
 
-  const demoAssets = objectValue(data.demo_assets);
-  const demoAssetFor = (role) => firstDefined(
-    demoAssets[role],
-    demoAssets[role === "ip_image" ? "ip_reference" : "brand_reference"],
-    data[role === "ip_image" ? "demo_ip_image" : "demo_brand_image"],
-  );
-
   const loadAssetState = (role, value, message) => {
     runtime.images[role] = value;
     hydrateImage(role);
-    if (role === "ip_image") setStateValue("ip_image", value);
-    if (role === "brand_image") setStateValue("brand_image", value);
+    // Submit both sides as one atomic value. Safari may otherwise deliver two
+    // independent Component state updates across different rerenders and let
+    // the newest image replace the already persisted sibling.
+    setStateValue("image_pair", {
+      ip_image: runtime.images.ip_image,
+      brand_image: runtime.images.brand_image,
+    });
     showToast(message);
   };
 
   const openAssetPicker = (role) => {
     const input = query(role === "ip_image" ? "#ipFileInput" : "#brandFileInput");
-    const demoAsset = demoAssetFor(role);
-    const demoMode = data.demo_mode !== false;
-    const alreadyLoaded = Boolean(imageSource(runtime.images[role], previews));
-    if (demoMode && demoAsset && !alreadyLoaded) {
-      loadAssetState(
-        role,
-        demoAsset,
-        role === "ip_image" ? "IP参考形象已加载" : "品牌参考形象已加载",
-      );
-      return;
-    }
     input?.click();
   };
 
   const readUpload = (role, input) => {
     const file = input.files?.[0];
-    input.value = "";
     if (!file) return;
     const allowed = new Set(["image/png", "image/jpeg", "image/webp"]);
     const extensionAllowed = /\.(png|jpe?g|webp)$/i.test(file.name);
-    const maxBytes = Number(data.max_upload_bytes || 10 * 1024 * 1024);
+    const maxBytes = Number(data.max_upload_bytes || 50 * 1024 * 1024);
     if ((!allowed.has(file.type) && !(file.type === "" && extensionAllowed)) || file.size <= 0) {
+      input.value = "";
       showToast("请选择 PNG、JPEG 或 WebP 图片");
       return;
     }
     if (file.size > maxBytes) {
+      input.value = "";
       showToast(`图片不能超过 ${Math.ceil(maxBytes / 1024 / 1024)} MB`);
       return;
     }
@@ -1028,6 +1048,7 @@ export default function(component) {
     readers.add(reader);
     reader.onload = () => {
       readers.delete(reader);
+      input.value = "";
       const payload = {
         source: "upload",
         filename: file.name,
@@ -1043,7 +1064,12 @@ export default function(component) {
     };
     reader.onerror = () => {
       readers.delete(reader);
+      input.value = "";
       showToast("图片读取失败，请重新选择");
+    };
+    reader.onabort = () => {
+      readers.delete(reader);
+      input.value = "";
     };
     reader.readAsDataURL(file);
   };
@@ -1128,7 +1154,8 @@ export default function(component) {
     showToast("正在生成结构化创意补充");
     emitTrigger("ai_supplement", intent);
   });
-  listen(query("#adoptSuggestionBtn"), "click", () => {
+  listen(adoptSuggestionButton, "click", () => {
+    if (suggestionAdopted) return;
     showToast("正在采用 AI 补充建议");
     emitTrigger("adopt_suggestion", { suggestion: stateValue("ai_suggestion") });
   });
@@ -1249,7 +1276,7 @@ export default function(component) {
       reason,
       agent_name: name || null,
       dedupe_token: token,
-    });
+    }, { stateKey: "advance_request" });
   };
 
   const renderCompleted = (completedNames) => {

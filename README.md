@@ -8,18 +8,52 @@ BYOK（Bring Your Own Key）版本不附带、预置或代理任何 API Key。�
 
 ## 快速启动
 
-建议使用 Python 3.12 或更高版本。
+请先安装 **Python 3.12 或 3.13**，并在解压后的项目根目录中执行命令。不要直接在 ZIP 预览窗口中运行。
+
+### macOS
+
+打开“终端”，进入解压后的目录：
 
 ```bash
-cd following-blowing-byok
+cd /path/to/following-blowing-byok
+python3 --version
 python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-streamlit run streamlit_app.py
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/python -m pip install -r requirements.txt
+./.venv/bin/python -m streamlit run streamlit_app.py
 ```
 
-在浏览器打开终端显示的地址，通常是 `http://localhost:8501`。Windows 用户可把虚拟环境激活命令替换为 `.venv\Scripts\activate`。
+也可以双击 `start_macos.command`。如果 macOS 首次拦截脚本，可在终端中执行：
+
+```bash
+chmod +x start_macos.command
+./start_macos.command
+```
+
+### Windows 10 / 11
+
+建议从 [python.org](https://www.python.org/downloads/) 安装 Python 3.12 或 3.13，安装时勾选 **Add Python to PATH**。在解压后的项目目录空白处点击地址栏，输入 `cmd` 并回车，然后执行：
+
+```bat
+py -3.12 --version
+py -3.12 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+.venv\Scripts\python.exe -m streamlit run streamlit_app.py
+```
+
+也可以直接双击 `start_windows.bat`。这两种方式都直接调用虚拟环境中的 Python，不需要执行 `activate`，因此不受 PowerShell 执行策略影响。
+
+启动成功后，浏览器打开 [http://localhost:8501](http://localhost:8501)。终端窗口需保持打开；要停止应用，在终端按 `Ctrl+C`。
+
+### 常见部署问题
+
+- `python3` / `py` 找不到：重新安装 Python，并确保加入 PATH。
+- `No module named streamlit`：请用上面的 `.venv/.../python -m pip install -r requirements.txt`，不要使用系统 `pip`。
+- `streamlit` 命令找不到：使用 `python -m streamlit`形式，如上述命令。
+- 8501 端口被占用：在启动命令后加 `--server.port 8502`，然后打开 `http://localhost:8502`。
+- 安装依赖失败：先确认 Python 是 3.12/3.13，再删除解压目录中自己生成的 `.venv` 并重试。
+- API 未配置不影响页面启动；启动后请在右上角 **⚙ API 设置** 中填入自己的 Key。本 GitHub 仓库不包含 API Key。
 
 ## 首次使用：6 步
 

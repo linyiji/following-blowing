@@ -12,7 +12,9 @@ FRONTEND = PROJECT_ROOT / "app" / "ui" / "frontend"
 
 API_TRIGGER_KEYS = {
     "open_api_settings",
+    "test_api_connection_with_credential",
     "test_api_connection",
+    "save_api_settings_with_credential",
     "save_api_settings",
     "delete_api_credentials",
     "close_api_settings",
@@ -91,6 +93,12 @@ def test_api_key_is_one_shot_trigger_data_not_component_or_browser_state(
     javascript = (FRONTEND / "component.js").read_text(encoding="utf-8")
 
     assert API_TRIGGER_KEYS <= set(module.TRIGGER_KEYS)
+    assert module.TRIGGER_KEYS.index(
+        "test_api_connection_with_credential"
+    ) < module.TRIGGER_KEYS.index("test_api_connection")
+    assert module.TRIGGER_KEYS.index(
+        "save_api_settings_with_credential"
+    ) < module.TRIGGER_KEYS.index("save_api_settings")
     assert "api_key" not in module.STATE_KEYS
     assert "api_key" not in module.DEFAULT_STATE
     assert 'setStateValue("api_key"' not in javascript
@@ -100,6 +108,8 @@ def test_api_key_is_one_shot_trigger_data_not_component_or_browser_state(
     assert "data.api_key" not in javascript
     assert "apiSettings.api_key" not in javascript
     assert "runtime.apiKey" not in javascript
+    assert "test_api_connection_with_credential" not in module.STATE_KEYS
+    assert "save_api_settings_with_credential" not in module.STATE_KEYS
 
     assert "pendingCredentials.get" in javascript
     assert "...(apiKey ? { credential_input: apiKey } : {})" in javascript
@@ -117,12 +127,35 @@ def test_api_settings_events_preserve_readiness_and_demo_contract() -> None:
     assert "startButton.disabled = !workflowStartEnabled" in javascript
     assert 'closeApiSettings("use_demo", { use_demo: true })' in javascript
     assert 'emitTrigger("open_api_settings"' in javascript
-    assert 'emitTrigger("test_api_connection", payload)' in javascript
-    assert 'emitTrigger("save_api_settings", apiSettingsPayload(false, event.currentTarget))' in javascript
+    assert '"test_api_connection_with_credential"' in javascript
+    assert '"save_api_settings_with_credential"' in javascript
+    assert "payload.credential_input" in javascript
     assert 'emitTrigger("delete_api_credentials", { confirmed: true })' in javascript
     assert "testApiConnection(false, event.currentTarget)" in javascript
     assert "testApiConnection(true, event.currentTarget)" in javascript
     assert "advanced_image_test: advancedImageTest" in javascript
+
+
+def test_credential_actions_clear_only_after_duplicate_renderer_listeners() -> None:
+    javascript = (FRONTEND / "component.js").read_text(encoding="utf-8")
+
+    assert "const clearCredentialAfterAction = () =>" in javascript
+    assert "globalThis.setTimeout(clearCredentialInput, 250);" in javascript
+    assert javascript.count("clearCredentialAfterAction();") == 3
+
+    test_handler = javascript.split(
+        'listen(query("#testApiConnectionBtn"), "click", (event) => {', 1
+    )[1].split("});", 1)[0]
+    assert test_handler.index("testApiConnection") < test_handler.index(
+        "clearCredentialAfterAction"
+    )
+
+    submit_handler = javascript.split(
+        'listen(apiSettingsForm, "submit", (event) => {', 1
+    )[1].split("});", 1)[0]
+    assert submit_handler.index("emitTrigger(") < submit_handler.index(
+        "clearCredentialAfterAction"
+    )
 
 
 def test_teamo_preset_fills_public_fields_but_never_a_credential() -> None:

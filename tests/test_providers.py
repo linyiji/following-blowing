@@ -99,6 +99,26 @@ def test_provider_client_retries_retryable_errors_only():
     assert result.metadata.attempt_count == 2
 
 
+def test_provider_client_retries_sdk_named_timeout_errors():
+    class APITimeoutError(Exception):
+        pass
+
+    attempts = 0
+
+    def flaky():
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise APITimeoutError("provider payload must not be echoed")
+        return {"ok": True}
+
+    client = ProviderClient(max_retries=1, backoff_seconds=0, sleep=lambda _: None)
+    result = client.call("ai.generate_structured", flaky)
+
+    assert result.value == {"ok": True}
+    assert result.metadata.attempt_count == 2
+
+
 def test_structured_output_repairs_exactly_once():
     calls = 0
 
@@ -161,13 +181,54 @@ def test_openai_provider_routes_native_structured_and_vision_calls(tmp_path):
         response_model=NativeOutput,
         model_role="main",
     )
+    auto_detail = provider.analyze_multimodal(
+        images=[image],
+        prompt="brand vision",
+        response_model=NativeOutput,
+        model_role="main",
+        image_detail="auto",
+    )
 
-    assert fast.score == main.score == 91
+    assert fast.score == main.score == auto_detail.score == 91
     assert [call["model"] for call in responses.calls] == [
         "gpt-5.6-luna",
+        "gpt-5.6-terra",
         "gpt-5.6-terra",
     ]
     vision_content = responses.calls[1]["input"][0]["content"]
     assert vision_content[1]["type"] == "input_image"
     assert vision_content[1]["detail"] == "high"
+    assert responses.calls[2]["input"][0]["content"][1]["detail"] == "auto"
     assert "must" not in str(responses.calls[0]["input"])
+
+    with pytest.raises(ValueError, match="Unsupported image detail"):
+        provider.analyze_multimodal(
+            images=[image],
+            prompt="invalid detail",
+            response_model=NativeOutput,
+            image_detail="maximum",
+        )
+
+
+def test_openai_sdk_retries_are_disabled_because_provider_client_governs_retries(
+    monkeypatch,
+):
+    captured = {}
+
+    class FakeOpenAI:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setitem(__import__("sys").modules, "openai", SimpleNamespace(OpenAI=FakeOpenAI))
+    provider = OpenAIProvider(
+        ProviderSettings(
+            provider="openai",
+            model="gpt-5.6-terra",
+            api_key="test-key",
+            base_url="https://provider.invalid/v1",
+        )
+    )
+
+    provider._require_sdk()
+
+    assert captured["max_retries"] == 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.schemas import BrandFeature, BrandFeaturePool, BrandProfile, CollaborationResearch
+from app.services.context_budget import compact_collaboration_research
 from app.workflow.graph import AgentNames
 
 from .base import AgentContext, AgentDecision, BaseAgent
@@ -118,7 +119,7 @@ class BrandFeatureAgent(BaseAgent[BrandFeaturePool]):
             response_model=BrandFeaturePool,
             context={
                 "brand_profile": profile.model_dump(mode="json"),
-                "collaboration_research": research.model_dump(mode="json"),
+                "collaboration_research": compact_collaboration_research(research),
             },
             model_role="main",
             demo_output=demo_output.model_dump(mode="json"),

@@ -84,12 +84,26 @@ class ProviderClient:
 
     @staticmethod
     def _retryable(exc: Exception) -> bool:
-        if isinstance(exc, WorkflowProviderError):
-            return bool(getattr(exc, "retryable", False))
-        if isinstance(exc, (TimeoutError, ConnectionError)):
-            return True
-        status = getattr(exc, "status_code", None)
-        return status in {408, 409, 429} or isinstance(status, int) and status >= 500
+        # SDKs commonly wrap built-in timeout/connection errors in their own
+        # exception classes (for example OpenAI's APITimeoutError). Inspect the
+        # short exception chain so the ProviderClient remains the single retry
+        # governor without importing a provider-specific SDK here.
+        current: BaseException | None = exc
+        seen: set[int] = set()
+        while current is not None and id(current) not in seen:
+            seen.add(id(current))
+            if isinstance(current, WorkflowProviderError):
+                return bool(getattr(current, "retryable", False))
+            if isinstance(current, (TimeoutError, ConnectionError)):
+                return True
+            exception_name = type(current).__name__.lower()
+            if "timeout" in exception_name or "connectionerror" in exception_name:
+                return True
+            status = getattr(current, "status_code", None)
+            if status in {408, 409, 429} or isinstance(status, int) and status >= 500:
+                return True
+            current = current.__cause__ or current.__context__
+        return False
 
     def call(self, operation: str, function: Callable[..., T], *args: Any, **kwargs: Any) -> ProviderCallResult[T]:
         request_id = f"req_{uuid.uuid4().hex}"

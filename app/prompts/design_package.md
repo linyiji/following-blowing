@@ -24,11 +24,13 @@ Describe the approved concept, organic fusion relationship, IP recognizability, 
 # RULES
 
 1. Use Luna only for copy generation.
-2. Describe how the character's role, behavior, product interaction, apparel, graphics, color, scene, or narrative creates the approved relationship.
-3. Explain that identity is preserved through character grammar, not through a frozen pose.
-4. Keep claims proportional to the supplied evidence.
-5. Do not construct JSON, Markdown structure, manifests, filenames, checksums, directories, or ZIP archives; Python owns all deterministic packaging.
-6. Do not modify scores, verdicts, evidence labels, or provenance.
+2. Write the entire description in concise Simplified Chinese. Keep only proper
+   names, model names, and unavoidable brand marks in their original language.
+3. Describe how the character's role, behavior, product interaction, apparel, graphics, color, scene, or narrative creates the approved relationship.
+4. Explain that identity is preserved through character grammar, not through a frozen pose.
+5. Keep claims proportional to the supplied evidence.
+6. Do not construct JSON, Markdown structure, manifests, filenames, checksums, directories, or ZIP archives; Python owns all deterministic packaging.
+7. Do not modify scores, verdicts, evidence labels, or provenance.
 
 # ALLOWED TRANSFORMATIONS
 
@@ -42,7 +44,7 @@ You may compress approved technical decisions into readable campaign copy and ad
 
 # OUTPUT CONTRACT
 
-Return plain text only: one concise commercial concept description suitable for Python to place in the deterministic Markdown and JSON package. No code fences, JSON object, headings, or file operations.
+Return plain Simplified Chinese text only: one concise commercial concept description suitable for Python to place in the deterministic Markdown and JSON package. No code fences, JSON object, headings, or file operations.
 
 # FAILURE CONDITIONS
 

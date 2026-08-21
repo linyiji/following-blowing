@@ -52,6 +52,9 @@ class OpenAIProvider(AIProvider):
                 api_key=self.settings.api_key,
                 base_url=self.settings.base_url,
                 timeout=self.settings.timeout,
+                # ProviderClient is the single retry governor. Leaving the SDK
+                # default enabled multiplies worst-case latency invisibly.
+                max_retries=0,
             )
         return self._sdk_client
 
@@ -184,7 +187,7 @@ class OpenAIProvider(AIProvider):
         return self._parsed_output(response, response_model)
 
     @staticmethod
-    def _image_content(image: ImageInput) -> dict[str, Any]:
+    def _image_content(image: ImageInput, *, detail: str = "high") -> dict[str, Any]:
         if isinstance(image, bytes):
             encoded = base64.b64encode(image).decode("ascii")
             url = f"data:image/png;base64,{encoded}"
@@ -201,7 +204,9 @@ class OpenAIProvider(AIProvider):
                 raise ProviderError(
                     "Multimodal image input must be bytes, a local file, or an HTTPS URL"
                 )
-        return {"type": "input_image", "image_url": url, "detail": "high"}
+        if detail not in {"low", "high", "auto"}:
+            raise ValueError(f"Unsupported image detail: {detail}")
+        return {"type": "input_image", "image_url": url, "detail": detail}
 
     def analyze_multimodal(
         self,
@@ -212,6 +217,7 @@ class OpenAIProvider(AIProvider):
         **kwargs: Any,
     ) -> Any:
         model = self._model_for_role(kwargs.pop("model_role", None))
+        image_detail = str(kwargs.pop("image_detail", "high")).lower()
         kwargs.pop("demo_output", None)
         effective_prompt = (
             self._structured_prompt(prompt, response_model)
@@ -221,7 +227,9 @@ class OpenAIProvider(AIProvider):
         content: list[dict[str, Any]] = [
             {"type": "input_text", "text": effective_prompt}
         ]
-        content.extend(self._image_content(item) for item in images)
+        content.extend(
+            self._image_content(item, detail=image_detail) for item in images
+        )
         input_value = [{"role": "user", "content": content}]
 
         if response_model is None:

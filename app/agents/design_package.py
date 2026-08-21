@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from app.schemas import (
     CandidateDesign,
     DesignPackage,
@@ -33,6 +35,7 @@ class DesignPackageAgent(BaseAgent[DesignPackage]):
         copy_description = self.ai_provider.generate_text(
             prompt=self.prompt_text,
             context={
+                "output_language": "Simplified Chinese (zh-CN)",
                 "theme_name": candidate.theme_name,
                 "fusion_logic": candidate.fusion_logic,
                 "design_tags": candidate.design_tags,
@@ -46,6 +49,25 @@ class DesignPackageAgent(BaseAgent[DesignPackage]):
                 "通过姿势、行为、产品互动与服装结构形成有机联名，同时遵守IP身份语法。"
             ),
         ).strip()
+        refusal_markers = (
+            "无法按要求",
+            "无法输出",
+            "未提供 guardian",
+            "缺少 guardian",
+            "cannot provide",
+            "cannot output",
+            "missing guardian",
+        )
+        if (
+            not re.search(r"[\u4e00-\u9fff]", copy_description)
+            or any(marker in copy_description.lower() for marker in refusal_markers)
+            or ("未提供" in copy_description and "guardian" in copy_description.lower())
+        ):
+            copy_description = (
+                f"「{candidate.theme_name}」让角色以“{adaptation.target_action}”进入品牌情境，"
+                f"通过{adaptation.target_pose}、品牌互动和可识别视觉元素形成有机联名，"
+                "同时保留角色的核心身份结构与线条语言。"
+            )
         manifest = {
             "result.png": candidate.image_uri,
             "creative_brief.json": AgentNames.CREATIVE_BRIEF,

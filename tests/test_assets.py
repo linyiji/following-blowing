@@ -6,11 +6,16 @@ import io
 import pytest
 
 from app.assets import AssetService, AssetValidationError, LocalAssetStorage
+from app.assets.validators import ImageValidationPolicy
 
 
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 )
+
+
+def test_default_upload_limit_is_50_mb() -> None:
+    assert ImageValidationPolicy().max_bytes == 50 * 1024 * 1024
 
 
 def test_asset_service_validates_hashes_and_uses_safe_storage(tmp_path):

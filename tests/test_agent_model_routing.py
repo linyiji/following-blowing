@@ -5,7 +5,19 @@ from pathlib import Path
 from app.config import PROJECT_ROOT, load_settings
 from app.controller import ApplicationController
 from app.providers.demo_ai import DemoAIProvider
-from app.schemas import InputAssets, UserIntent, WorkflowStatus
+from app.schemas import (
+    BrandFeaturePool,
+    CollaborationResearch,
+    IPIntelligenceResult,
+    InputAssets,
+    UserIntent,
+    WorkflowStatus,
+)
+from app.services.context_budget import (
+    compact_brand_pool,
+    compact_collaboration_research,
+    compact_ip_for_brief,
+)
 from app.workflow.engine import WorkflowEngine
 from app.workflow.graph import AgentNames
 
@@ -91,6 +103,23 @@ def test_workflow_agents_route_fast_and_main_models_without_dag_changes() -> Non
         "primary logo geometry visible in the reference"
     ]
     assert "Golden Arches" not in str(brand_profile)
+
+    compact_ip = compact_ip_for_brief(
+        IPIntelligenceResult.model_validate(
+            snapshot.outputs[AgentNames.IP_INTELLIGENCE]
+        )
+    )
+    compact_brand = compact_brand_pool(
+        BrandFeaturePool.model_validate(snapshot.outputs[AgentNames.BRAND_FEATURE])
+    )
+    compact_research = compact_collaboration_research(
+        CollaborationResearch.model_validate(
+            snapshot.outputs[AgentNames.BRAND_COLLABORATION]
+        )
+    )
+    assert "pose_transformation_rules" not in compact_ip["identity_grammar"]
+    assert "evidence" not in compact_brand["features"][0]
+    assert len(compact_research["results"]) <= 6
 
 
 def test_ai_supplement_routes_to_fast_model_and_keeps_user_input(tmp_path: Path) -> None:

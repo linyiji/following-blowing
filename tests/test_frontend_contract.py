@@ -14,6 +14,8 @@ FRONTEND = PROJECT_ROOT / "app" / "ui" / "frontend"
 STATE_KEYS = {
     "ip_image",
     "brand_image",
+    "image_pair",
+    "advance_request",
     "selected_goals",
     "goal_text",
     "ai_suggestion",
@@ -31,7 +33,9 @@ TRIGGER_KEYS = {
     "export_package",
     "retry_agent",
     "open_api_settings",
+    "test_api_connection_with_credential",
     "test_api_connection",
+    "save_api_settings_with_credential",
     "save_api_settings",
     "delete_api_credentials",
     "close_api_settings",
@@ -129,7 +133,21 @@ def test_frontend_uses_v2_bidirectional_contract_without_html_sinks() -> None:
     for event_field in ("event_id", "run_id", "revision", "dedupe_token"):
         assert event_field in javascript
     assert "runtime.autoAdvanceTokens" in javascript
+    assert 'stateKey: "advance_request"' in javascript
+    assert "setStateValue(options.stateKey, event)" in javascript
     assert "FileReader" in javascript
+    read_upload = javascript.split("const readUpload =", 1)[1].split(
+        "reader.readAsDataURL(file);", 1
+    )[0]
+    reader_lifecycle = read_upload.split("const reader = new FileReader();", 1)[1]
+    assert reader_lifecycle.index("reader.onload =") < reader_lifecycle.index(
+        'input.value = "";'
+    )
+    assert "reader.onabort" in reader_lifecycle
+    assert 'setStateValue("image_pair"' in javascript
+    assert 'adoptSuggestionButton.textContent = suggestionAdopted ? "✓ 已采用"' in javascript
+    assert "50 * 1024 * 1024" in javascript
+    assert "demoAssetFor" not in javascript
     assert "image/png" in javascript
     assert "image/jpeg" in javascript
     assert "URL.createObjectURL" in javascript

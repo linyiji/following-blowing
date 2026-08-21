@@ -8,6 +8,7 @@ from app.schemas import (
     IPIntelligenceResult,
     TransformationLevel,
 )
+from app.services.context_budget import compact_brand_pool, compact_ip_for_brief
 from app.workflow.graph import AgentNames
 
 from .base import AgentContext, AgentDecision, BaseAgent
@@ -96,9 +97,8 @@ class CreativeBriefAgent(BaseAgent[CreativeBrief]):
                 "user_free_text": intent.goal_text,
                 "user_selected_goals": list(intent.selected_goals),
                 "adopted_ai_supplement": ai_contribution,
-                "ip_dna": ip_result.ip_dna.model_dump(mode="json"),
-                "ip_identity_grammar": grammar.model_dump(mode="json"),
-                "brand_feature_pool": brand_pool.model_dump(mode="json"),
+                **compact_ip_for_brief(ip_result),
+                "brand_feature_pool": compact_brand_pool(brand_pool),
             },
             model_role="main",
             demo_output=demo_output.model_dump(mode="json"),

@@ -28,6 +28,7 @@ Produce grounded reasons, evidence, and a concise explanation for the supplied s
 4. Evaluate the result in context: a sticker-like treatment normally weakens fusion naturalness and innovation, while successful behavior, role, product interaction, and narrative may strengthen fusion naturalness, commercial value, and innovation.
 5. Explain only evidence visible in the candidate or present in structured inputs. Do not invent market claims, brand facts, or user preferences.
 6. Do not rank a candidate that has not received authoritative Guardian `PASS`.
+7. 所有面向用户的理由、证据与总结必须使用简体中文；不可避免的品牌名和字段名除外。
 
 # ALLOWED TRANSFORMATIONS
 

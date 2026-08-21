@@ -20,6 +20,8 @@ COMPONENT_NAME = "ai_ip_brand_workflow"
 STATE_KEYS: tuple[str, ...] = (
     "ip_image",
     "brand_image",
+    "image_pair",
+    "advance_request",
     "selected_goals",
     "goal_text",
     "ai_suggestion",
@@ -37,7 +39,9 @@ TRIGGER_KEYS: tuple[str, ...] = (
     "export_package",
     "retry_agent",
     "open_api_settings",
+    "test_api_connection_with_credential",
     "test_api_connection",
+    "save_api_settings_with_credential",
     "save_api_settings",
     "delete_api_credentials",
     "close_api_settings",
@@ -46,6 +50,8 @@ TRIGGER_KEYS: tuple[str, ...] = (
 DEFAULT_STATE: dict[str, Any] = {
     "ip_image": None,
     "brand_image": None,
+    "image_pair": {"ip_image": None, "brand_image": None},
+    "advance_request": None,
     "selected_goals": [],
     "goal_text": "",
     "ai_suggestion": None,

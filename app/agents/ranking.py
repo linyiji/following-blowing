@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.errors import GuardianRejectedError
+from app.providers.demo_ai import DemoAIProvider
 from app.schemas import (
     BrandFeaturePool,
     CandidateDesign,
@@ -94,28 +95,27 @@ class RankingAgent(BaseAgent[RankingResult]):
         }
         reasons = {
             "user_goal_match": (
-                f"The strategy addresses {intent_count} prioritized user constraint(s) in fixed priority order."
+                f"方案按固定优先级响应了 {intent_count} 项用户约束。"
             ),
             "ip_identity_consistency": (
-                f"Guardian passed the candidate at {guardian.identity_score:.2f}; this value is reused without modification."
+                f"Guardian 以 {guardian.identity_score:.2f} 分通过候选图；此项直接复用该分数，未作修改。"
             ),
             "brand_recognition": (
-                f"The concept uses {brand_cue_count} controlled cue categories from {brand.brand_name}."
+                f"方案使用了 {brand.brand_name} 的 {brand_cue_count} 类受控品牌线索。"
             ),
             "fusion_naturalness": (
-                f"Fusion depth is {depth.value}; the score rewards behavior, role, product, apparel, "
-                "and scene relationships and penalizes sticker-like application."
+                f"融合深度为 {depth.value}；评分依据角色行为、产品、服装与场景关系，而非简单贴图。"
             ),
             "commercial_value": (
-                f"The {depth.value} relationship is evaluated for campaign, product, and merchandise use."
+                f"{depth.value} 融合关系可用于传播画面、产品与衍生品场景。"
             ),
             "historical_collaboration_reference": (
-                f"Supported by {len(research.results)} sourced historical reference(s)."
+                f"共有 {len(research.results)} 条有来源的历史联名资料提供支持。"
                 if research.results
-                else "No sourced historical reference was available, so this dimension is conservatively scored."
+                else "没有可用的有来源历史联名资料，因此该维度采用保守评分。"
             ),
             "innovation": (
-                f"Innovation reflects whether {depth.value} goes beyond logo, color, and mechanical stacking."
+                f"创新性依据 {depth.value} 是否超越 Logo、配色和机械堆叠来判断。"
             ),
         }
         if self.ai_provider is None:
@@ -123,31 +123,52 @@ class RankingAgent(BaseAgent[RankingResult]):
         demo_narrative = RankingNarrative(
             score_reasons=reasons,
             evidence=[
-                f"Guardian identity_score: {guardian.identity_score:.2f}",
-                f"Brand feature categories used: {brand_cue_count}",
-                f"Historical references available: {len(research.results)}",
+                f"Guardian 身份一致性分数：{guardian.identity_score:.2f}",
+                f"已使用品牌特征类别：{brand_cue_count}",
+                f"可用历史参考数量：{len(research.results)}",
             ],
             explanation=(
-                "The fixed Python breakdown balances user fit and IP identity with brand "
-                "recognition, fusion quality, commercial value, precedent, and innovation."
+                "固定的 Python 评分综合衡量用户目标、IP 身份一致性、品牌识别、"
+                "融合质量、商业价值、历史参考与创新性。"
             ),
         )
-        narrative = self.ai_provider.generate_structured(
-            prompt=self.prompt_text,
-            response_model=RankingNarrative,
-            context={
-                "fixed_score_breakdown": scores,
-                "guardian_identity_score": guardian.identity_score,
-                "user_constraints": context.user_intent.prioritized_constraints(),
-                "brand_feature_pool": brand.model_dump(mode="json"),
-                "fusion_strategy": strategy.model_dump(mode="json"),
-                "fusion_relationship": strategy.fusion_relationship.model_dump(mode="json"),
-                "ip_adaptation_plan": adaptation.model_dump(mode="json"),
-                "historical_reference_count": len(research.results),
-            },
-            model_role="main",
-            demo_output=demo_narrative.model_dump(mode="json"),
-        )
+        narrative_warning: str | None = None
+        if isinstance(self.ai_provider, DemoAIProvider):
+            narrative = self.ai_provider.generate_structured(
+                prompt=self.prompt_text,
+                response_model=RankingNarrative,
+                context={
+                    "fixed_score_breakdown": scores,
+                    "fixed_score_reasons": reasons,
+                    "guardian_identity_score": guardian.identity_score,
+                    "guardian_verdict": guardian.verdict.value,
+                    "user_constraints": context.user_intent.prioritized_constraints(),
+                    "brand_summary": {
+                        "name": brand.brand_name,
+                        "feature_count": len(brand.features),
+                        "cue_categories_used": brand_cue_count,
+                    },
+                    "fusion_summary": {
+                        "depth": depth.value,
+                        "interaction": strategy.fusion_relationship.interaction,
+                        "behavior": strategy.fusion_relationship.behavior,
+                    },
+                    "adaptation_summary": {
+                        "target_action": adaptation.target_action,
+                        "target_pose": adaptation.target_pose,
+                    },
+                    "historical_reference_count": len(research.results),
+                },
+                model_role="main",
+                demo_output=demo_narrative.model_dump(mode="json"),
+            )
+        else:
+            # Ranking numbers and their auditable base reasons are entirely
+            # Python-owned. The compatible gateway currently rejects this
+            # optional narrative schema after a long wait, so live runs avoid
+            # blocking the workflow on non-authoritative prose.
+            narrative = demo_narrative
+            narrative_warning = "评分与分项由 Python 固定计算，并已生成中文审计理由。"
         if not isinstance(narrative, RankingNarrative):
             narrative = RankingNarrative.model_validate(narrative)
         narrative_reasons = {
@@ -169,4 +190,5 @@ class RankingAgent(BaseAgent[RankingResult]):
             ),
             output_summary=f"Candidate ranked {output.total_score:.2f}/100.",
             evidence=tuple([*narrative_reasons.values(), *narrative.evidence]),
+            warnings=(narrative_warning,) if narrative_warning else (),
         )

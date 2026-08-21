@@ -10,6 +10,7 @@ from app.schemas import (
     FusionStrategy,
     IPIntelligenceResult,
 )
+from app.services.context_budget import compact_brand_pool, compact_identity_for_fusion
 from app.workflow.graph import AgentNames
 
 from .base import AgentContext, AgentDecision, BaseAgent
@@ -119,8 +120,8 @@ class FusionDecisionAgent(BaseAgent[FusionStrategy]):
             response_model=FusionStrategy,
             context={
                 "creative_brief": brief.model_dump(mode="json"),
-                "brand_feature_pool": brand.model_dump(mode="json"),
-                "ip_identity_grammar": grammar.model_dump(mode="json"),
+                "brand_feature_pool": compact_brand_pool(brand),
+                "ip_identity_grammar": compact_identity_for_fusion(grammar),
                 "prioritized_user_constraints": context.user_intent.prioritized_constraints(),
             },
             model_role="main",

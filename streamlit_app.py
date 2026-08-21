@@ -29,7 +29,7 @@ from app.state import (
 from app.ui.component import TRIGGER_KEYS, render_component
 
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 _SAFE_RUN_ID = re.compile(r"^run[-_][A-Za-z0-9_-]{8,80}$")
 _API_SERVICE_SESSION_KEY = "_following_blowing_api_settings_service"
 
@@ -408,6 +408,10 @@ def _hydrate_run_before_component_normalization() -> None:
     raw.update(
         ip_image=_safe_asset_payload(ip_asset_id),
         brand_image=_safe_asset_payload(brand_asset_id),
+        image_pair={
+            "ip_image": _safe_asset_payload(ip_asset_id),
+            "brand_image": _safe_asset_payload(brand_asset_id),
+        },
         selected_goals=list(restored.user_intent.selected_goals),
         goal_text=restored.user_intent.goal_text,
         ai_suggestion=suggestion,
@@ -499,8 +503,18 @@ def _normalize_component_state() -> None:
         raw = {}
         st.session_state[COMPONENT_KEY] = raw
 
-    _normalize_asset_state("ip_image", raw.get("ip_image"))
-    _normalize_asset_state("brand_image", raw.get("brand_image"))
+    image_pair = raw.get("image_pair")
+    pair = image_pair if isinstance(image_pair, Mapping) else {}
+    pair_ip_image = pair.get("ip_image")
+    pair_brand_image = pair.get("brand_image")
+    _normalize_asset_state(
+        "ip_image",
+        pair_ip_image if pair_ip_image is not None else raw.get("ip_image"),
+    )
+    _normalize_asset_state(
+        "brand_image",
+        pair_brand_image if pair_brand_image is not None else raw.get("brand_image"),
+    )
 
     selected = raw.get("selected_goals")
     selected_goals = (
@@ -559,9 +573,15 @@ def _normalize_component_state() -> None:
     ui["goal_text"] = goal_text
 
     # Replace upload Base64 immediately with a small browser-safe asset payload.
+    persisted_ip_image = _safe_asset_payload(ui.get("ip_asset_id"))
+    persisted_brand_image = _safe_asset_payload(ui.get("brand_asset_id"))
     raw.update(
-        ip_image=_safe_asset_payload(ui.get("ip_asset_id")),
-        brand_image=_safe_asset_payload(ui.get("brand_asset_id")),
+        ip_image=persisted_ip_image,
+        brand_image=persisted_brand_image,
+        image_pair={
+            "ip_image": persisted_ip_image,
+            "brand_image": persisted_brand_image,
+        },
         selected_goals=list(ui["selected_goals"]),
         goal_text=ui["goal_text"],
         ai_suggestion=ui.get("ai_suggestion"),
@@ -657,6 +677,7 @@ component_data: dict[str, Any] = {
     "selected_goals": list(ui.get("selected_goals") or []),
     "goal_text": str(ui.get("goal_text") or ""),
     "ai_suggestion": ui.get("ai_suggestion"),
+    "ai_suggestion_adopted": bool(ui.get("ai_suggestion_adopted")),
     "state": component_defaults(st.session_state),
     "workflow_snapshot": public_snapshot,
     "page_state": public_snapshot or {"status": "ready", "run_id": None, "revision": 0},
@@ -718,7 +739,7 @@ def _current_snapshot_for_trigger(payload: Any) -> WorkflowSnapshot:
 
 
 handled = False
-for trigger_name in TRIGGER_KEYS:
+for trigger_name in (*TRIGGER_KEYS, "advance_request"):
     raw_payload = _trigger_payload(trigger_name)
     if raw_payload is None or not consume_event(st.session_state, raw_payload):
         continue
@@ -734,6 +755,11 @@ for trigger_name in TRIGGER_KEYS:
     if isinstance(raw_payload, dict):
         raw_payload.pop("credential_input", None)
         raw_payload.pop("api_key", None)
+    trigger_name = {
+        "advance_request": "advance_workflow",
+        "test_api_connection_with_credential": "test_api_connection",
+        "save_api_settings_with_credential": "save_api_settings",
+    }.get(trigger_name, trigger_name)
     try:
         if trigger_name == "open_api_settings":
             ui["api_settings_open"] = True
@@ -834,6 +860,11 @@ for trigger_name in TRIGGER_KEYS:
             _notification(ui, f"AI 补充建议已生成 · v{count}")
 
         elif trigger_name == "adopt_suggestion":
+            supplied_suggestion = (
+                payload.get("suggestion") if isinstance(payload, Mapping) else None
+            )
+            if not ui.get("ai_suggestion") and supplied_suggestion:
+                ui["ai_suggestion"] = supplied_suggestion
             if not ui.get("ai_suggestion"):
                 raise ValueError("请先生成 AI 补充建议")
             if (
@@ -841,19 +872,20 @@ for trigger_name in TRIGGER_KEYS:
                 and ui.get("ai_suggestion_source_run_id")
             ):
                 raise ValueError("恢复 Run 的 AI 建议仅供审计，请在比赛 Run 前重新生成")
-            current = _restore_current_snapshot()
-            if current is not None:
-                if not _detach_competition_run(current):
-                    _current_snapshot_for_trigger(payload)
-                    controller.invalidate_run(
-                        current.run_id,
-                        "user_intent",
-                        selected_goals=ui["selected_goals"],
-                        goal_text=ui["goal_text"],
-                        ai_suggestion=ui["ai_suggestion"],
-                        ai_suggestion_adopted=True,
-                    )
-                    _clear_download_state()
+            if not bool(ui.get("ai_suggestion_adopted")):
+                current = _restore_current_snapshot()
+                if current is not None:
+                    if not _detach_competition_run(current):
+                        _current_snapshot_for_trigger(payload)
+                        controller.invalidate_run(
+                            current.run_id,
+                            "user_intent",
+                            selected_goals=ui["selected_goals"],
+                            goal_text=ui["goal_text"],
+                            ai_suggestion=ui["ai_suggestion"],
+                            ai_suggestion_adopted=True,
+                        )
+                        _clear_download_state()
             ui["ai_suggestion_adopted"] = True
             _notification(ui, "AI 建议已采用；你的自由输入保持不变")
 

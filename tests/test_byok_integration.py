@@ -30,7 +30,9 @@ FRONTEND = PROJECT_ROOT / "app" / "ui" / "frontend"
 
 API_SETTING_TRIGGERS = {
     "open_api_settings",
+    "test_api_connection_with_credential",
     "test_api_connection",
+    "save_api_settings_with_credential",
     "save_api_settings",
     "delete_api_credentials",
     "close_api_settings",
@@ -323,6 +325,8 @@ def test_frontend_has_no_browser_credential_persistence_channel() -> None:
     assert "apiSettings.api_key" not in javascript
     assert "runtime.apiKey" not in javascript
     assert "clearCredentialInput();" in javascript
+    assert "globalThis.setTimeout(clearCredentialInput, 250);" in javascript
+    assert javascript.count("clearCredentialAfterAction();") == 3
 
     input_tag = html.split('id="apiKeyInput"', 1)[1].split(">", 1)[0]
     assert 'type="password"' in input_tag
@@ -339,6 +343,14 @@ def test_api_settings_trigger_names_match_python_and_frontend_contract() -> None
     assert API_SETTING_TRIGGERS <= trigger_keys
     for trigger in API_SETTING_TRIGGERS:
         assert f'"{trigger}"' in javascript
+
+    ordered_trigger_keys = _literal_assignment(python_source, "TRIGGER_KEYS")
+    assert ordered_trigger_keys.index(
+        "test_api_connection_with_credential"
+    ) < ordered_trigger_keys.index("test_api_connection")
+    assert ordered_trigger_keys.index(
+        "save_api_settings_with_credential"
+    ) < ordered_trigger_keys.index("save_api_settings")
 
 
 def test_release_secret_scan_finds_no_credential_shaped_value() -> None:

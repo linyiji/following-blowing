@@ -30,7 +30,7 @@ class ValidatedImage:
 
 @dataclass(frozen=True, slots=True)
 class ImageValidationPolicy:
-    max_bytes: int = 10 * 1024 * 1024
+    max_bytes: int = 50 * 1024 * 1024
     max_width: int = 12_000
     max_height: int = 12_000
     max_pixels: int = 40_000_000

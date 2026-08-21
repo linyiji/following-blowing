@@ -19,6 +19,8 @@ MAX_PROCESSED_EVENTS = 128
 COMPONENT_STATE_DEFAULTS: dict[str, Any] = {
     "ip_image": None,
     "brand_image": None,
+    "image_pair": {"ip_image": None, "brand_image": None},
+    "advance_request": None,
     "selected_goals": [],
     "goal_text": "",
     "ai_suggestion": None,
