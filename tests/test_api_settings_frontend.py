@@ -134,7 +134,7 @@ def test_api_settings_events_preserve_readiness_and_demo_contract() -> None:
     assert "testApiConnection(false, event.currentTarget)" in javascript
     assert "testApiConnection(true, event.currentTarget)" in javascript
     assert "advanced_image_test: advancedImageTest" in javascript
-    assert "连接测试已通过，但 API Key 尚未保存" in javascript
+    assert "保存刚才通过测试的 API Key" in javascript
     assert "正在保存 API 设置并更新主页状态" in javascript
 
 

@@ -786,6 +786,13 @@ for trigger_name in (*TRIGGER_KEYS, "advance_request"):
                 if bool(payload.get("advanced_image_test"))
                 else tester.test(runtime)
             )
+            if result.ok and runtime.api_key_value():
+                api_settings_service.stage_verified_credential(
+                    form,
+                    runtime.api_key_value() or "",
+                )
+            else:
+                api_settings_service.clear_verified_credential()
             ui["api_connection_result"] = result.public_view()
             ui["api_settings_result"] = {
                 "ok": result.ok,
@@ -797,16 +804,19 @@ for trigger_name in (*TRIGGER_KEYS, "advance_request"):
             if not isinstance(payload, Mapping):
                 raise ValueError("API 设置保存请求无效")
             form = _api_form_settings(payload)
+            verified_api_key = api_settings_service.consume_verified_credential(form)
+            if verified_api_key is None:
+                raise ValueError(
+                    "请先完成测试连接。只有通过测试的 API Key 才能保存；"
+                    "如果测试后修改了配置，请重新测试。"
+                )
             saved = api_settings_service.save(
                 form,
-                api_key=supplied_api_key,
+                api_key=verified_api_key,
                 persist_credential=True,
             )
             if not saved.credential.configured:
-                raise ValueError(
-                    "尚未保存 API Key。测试时输入的 Key 不会自动保存，"
-                    "请重新输入后点击保存设置。"
-                )
+                raise ValueError("通过测试的 API Key 未能保存，请重新测试后再试。")
             ui["api_demo_selected"] = False
             # Save and test are independent. Keep the modal open so the user
             # sees the refreshed credential state while the same rerun also

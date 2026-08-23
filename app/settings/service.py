@@ -42,6 +42,51 @@ class APISettingsService:
         self.repository = repository or SettingsRepository()
         self.credential_store = credential_store or CredentialStore()
         self._lock = RLock()
+        # One-shot, server-memory-only handoff from a successful connection
+        # test to an explicit save action. It is never serialized or exposed
+        # through public/session UI state.
+        self._verified_settings: ApiSettings | None = None
+        self._verified_api_key: SecretStr | None = None
+
+    def stage_verified_credential(
+        self,
+        settings: ApiSettings | Mapping[str, Any],
+        api_key: str | SecretStr,
+    ) -> None:
+        """Remember a successfully tested key until the next matching save."""
+
+        normalized = self._normalize_settings(settings)
+        raw_value = (
+            api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
+        )
+        if not isinstance(raw_value, str) or not raw_value.strip():
+            raise ValueError("Verified API key must not be blank")
+        with self._lock:
+            self._verified_settings = normalized
+            self._verified_api_key = SecretStr(raw_value.strip())
+
+    def clear_verified_credential(self) -> None:
+        with self._lock:
+            self._verified_settings = None
+            self._verified_api_key = None
+
+    def consume_verified_credential(
+        self,
+        settings: ApiSettings | Mapping[str, Any],
+    ) -> str | None:
+        """Consume the tested key only when the exact tested settings match."""
+
+        normalized = self._normalize_settings(settings)
+        with self._lock:
+            if (
+                self._verified_settings != normalized
+                or self._verified_api_key is None
+            ):
+                return None
+            secret = self._verified_api_key.get_secret_value()
+            self._verified_settings = None
+            self._verified_api_key = None
+            return secret
 
     def load(self) -> ApiSettings:
         """Load only non-sensitive provider settings."""

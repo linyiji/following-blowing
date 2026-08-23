@@ -159,6 +159,40 @@ def test_service_accepts_nested_timeouts_and_public_view_is_flat_safe(
     assert_secret_absent(public, secret)
 
 
+def test_successfully_tested_key_is_one_shot_for_matching_save(
+    tmp_path: Path,
+) -> None:
+    service = make_service(tmp_path)
+    settings = ApiSettings(base_url="https://example.test/v1")
+
+    service.stage_verified_credential(settings, DUMMY_TEST_TOKEN)
+
+    assert service.consume_verified_credential(settings) == DUMMY_TEST_TOKEN
+    assert service.consume_verified_credential(settings) is None
+    assert DUMMY_TEST_TOKEN not in repr(service)
+
+
+def test_tested_key_cannot_save_changed_provider_settings(tmp_path: Path) -> None:
+    service = make_service(tmp_path)
+    tested = ApiSettings(base_url="https://example.test/v1", model_main="main-a")
+    changed = tested.model_copy(update={"model_main": "main-b"})
+
+    service.stage_verified_credential(tested, DUMMY_TEST_TOKEN)
+
+    assert service.consume_verified_credential(changed) is None
+    assert service.consume_verified_credential(tested) == DUMMY_TEST_TOKEN
+
+
+def test_failed_test_can_clear_staged_key(tmp_path: Path) -> None:
+    service = make_service(tmp_path)
+    settings = ApiSettings(base_url="https://example.test/v1")
+    service.stage_verified_credential(settings, DUMMY_TEST_TOKEN)
+
+    service.clear_verified_credential()
+
+    assert service.consume_verified_credential(settings) is None
+
+
 def test_keyring_credential_persists_but_status_reopen_and_delete_are_safe(
     tmp_path: Path,
 ) -> None:

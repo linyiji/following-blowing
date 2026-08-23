@@ -693,7 +693,7 @@ export default function(component) {
     apiCredentialNote.classList.toggle("warning", sessionOnly);
     const ephemeralTestPassed = !credentialConfigured && apiConnectionResult.ok === true;
     apiCredentialNote.textContent = ephemeralTestPassed
-      ? "连接测试已通过，但 API Key 尚未保存。请重新输入 Key 后点击“保存设置”。"
+      ? "连接测试已通过。点击“保存设置”将保存刚才通过测试的 API Key。"
       : sessionOnly
       ? "系统安全凭据存储不可用，本次 API Key 仅在当前会话中使用。"
       : credentialConfigured

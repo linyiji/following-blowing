@@ -26,7 +26,8 @@ def test_save_settings_refreshes_modal_and_home_status_independently_from_test()
     assert 'ui["api_settings_force_close"] = False' in save_branch
     assert 'ui["api_connection_result"] = None' in save_branch
     assert "弹窗与主页服务状态已更新" in save_branch
-    assert "测试时输入的 Key 不会自动保存" in save_branch
+    assert "consume_verified_credential" in save_branch
+    assert "请先完成测试连接" in save_branch
 
 
 def _snapshot():
