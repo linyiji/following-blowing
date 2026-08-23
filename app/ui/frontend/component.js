@@ -249,6 +249,7 @@ function getRuntime(root) {
       activeAgent: null,
       apiSettingsOpen: false,
       apiSettingsDraft: null,
+      apiConnectionTesting: false,
       deleteCredentialConfirmation: false,
       images: { ip_image: null, brand_image: null },
       selectedGoals: [],
@@ -635,7 +636,13 @@ export default function(component) {
   const apiImageTimeout = query("#apiImageTimeout");
   const apiCredentialNote = query("#apiCredentialNote");
   const apiResultPanel = query("#apiConnectionResult");
+  const testApiConnectionBtn = query("#testApiConnectionBtn");
+  const advancedImageTestBtn = query("#advancedImageTestBtn");
   const deleteCredentialConfirm = query("#deleteCredentialConfirm");
+
+  // A renderer refresh after the trigger means Python has finished the
+  // blocking provider check and returned a result (success or failure).
+  if (runtime.apiConnectionTesting) runtime.apiConnectionTesting = false;
 
   const clearCredentialDom = () => {
     const currentCredentialInput = query("#apiKeyInput");
@@ -677,11 +684,17 @@ export default function(component) {
     });
   }
   if (apiCredentialNote) {
+    apiCredentialNote.classList.remove("testing");
+    apiCredentialNote.removeAttribute("role");
+    apiCredentialNote.removeAttribute("aria-live");
     const sessionOnly = apiSettings.session_only === true
       || (credentialConfigured && apiSettings.credential_persistent === false);
     apiCredentialNote.classList.toggle("configured", credentialConfigured && !sessionOnly);
     apiCredentialNote.classList.toggle("warning", sessionOnly);
-    apiCredentialNote.textContent = sessionOnly
+    const ephemeralTestPassed = !credentialConfigured && apiConnectionResult.ok === true;
+    apiCredentialNote.textContent = ephemeralTestPassed
+      ? "连接测试已通过，但 API Key 尚未保存。请重新输入 Key 后点击“保存设置”。"
+      : sessionOnly
       ? "系统安全凭据存储不可用，本次 API Key 仅在当前会话中使用。"
       : credentialConfigured
         ? "已保存安全凭据。如需替换，请输入新的 API Key。"
@@ -750,6 +763,35 @@ export default function(component) {
     ))}`;
   };
   renderApiConnectionResult();
+
+  const setApiTestLoading = (loading, advancedImageTest = false) => {
+    runtime.apiConnectionTesting = Boolean(loading);
+    [testApiConnectionBtn, advancedImageTestBtn].forEach((button) => {
+      if (!button) return;
+      button.disabled = Boolean(loading);
+      button.setAttribute("aria-busy", String(Boolean(loading)));
+    });
+    if (testApiConnectionBtn) {
+      testApiConnectionBtn.classList.toggle("is-loading", Boolean(loading));
+      testApiConnectionBtn.textContent = loading ? "连接测试中…" : "测试连接";
+    }
+    if (loading && apiCredentialNote) {
+      apiCredentialNote.classList.remove("configured", "warning");
+      apiCredentialNote.classList.add("testing");
+      apiCredentialNote.setAttribute("role", "status");
+      apiCredentialNote.setAttribute("aria-live", "polite");
+      apiCredentialNote.textContent = advancedImageTest
+        ? "正在执行高级图像测试，请保持页面打开…"
+        : "正在测试 API 连接，请保持页面打开…";
+    }
+    if (loading && apiResultPanel) {
+      apiResultPanel.className = "api-connection-result show testing";
+      apiResultPanel.textContent = advancedImageTest
+        ? "API Connection\n正在执行高级图像测试，请保持页面打开…"
+        : "API Connection\n正在检查 Provider、Fast 和 Main，请保持页面打开（通常需要 10–90 秒）…";
+    }
+  };
+  setApiTestLoading(false);
 
   const setApiSettingsVisibility = (open) => {
     runtime.apiSettingsOpen = Boolean(open);
@@ -851,24 +893,22 @@ export default function(component) {
   const testApiConnection = (advancedImageTest, sourceElement) => {
     if (!apiSettingsForm?.reportValidity()) return;
     const payload = apiSettingsPayload(advancedImageTest, sourceElement);
+    // Replace the saved-credential note and any previous connection result
+    // before handing control to Streamlit. The next renderer restores the
+    // credential note and paints only the newly returned result.
+    setApiTestLoading(true, advancedImageTest);
     emitTrigger(
       payload.credential_input
         ? "test_api_connection_with_credential"
         : "test_api_connection",
       payload,
     );
-    if (apiResultPanel) {
-      apiResultPanel.className = "api-connection-result show testing";
-      apiResultPanel.textContent = advancedImageTest
-        ? "API Connection\n正在执行用户确认的高级图像测试（可能收费）…"
-        : "API Connection\n正在检查 Provider、Fast 和 Main；普通测试不会生成图像…";
-    }
   };
-  listen(query("#testApiConnectionBtn"), "click", (event) => {
+  listen(testApiConnectionBtn, "click", (event) => {
     testApiConnection(false, event.currentTarget);
     clearCredentialAfterAction();
   });
-  listen(query("#advancedImageTestBtn"), "click", (event) => {
+  listen(advancedImageTestBtn, "click", (event) => {
     testApiConnection(true, event.currentTarget);
     clearCredentialAfterAction();
   });
@@ -883,7 +923,7 @@ export default function(component) {
       payload,
     );
     clearCredentialAfterAction();
-    showToast("API 设置已提交安全保存");
+    showToast("正在保存 API 设置并更新主页状态…");
   });
 
   const showDeleteCredentialConfirmation = () => {

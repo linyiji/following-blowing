@@ -141,6 +141,7 @@ button:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
 .api-credential-note{margin-top:16px;padding:10px 12px;border-radius:11px;background:#f8fafc;border:1px solid #e2e8f0;color:#475569;font-size:12px;line-height:1.6}
 .api-credential-note.configured{background:#ecfdf3;border-color:#bbf7d0;color:#166534}
 .api-credential-note.warning{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.api-credential-note.testing{background:#eff6ff;border-color:#bfdbfe;color:#1e40af;font-weight:700}
 .api-connection-result{display:none;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155;font-size:13px;line-height:1.65;white-space:pre-line}
 .api-connection-result.show{display:block}
 .api-connection-result.success{background:#ecfdf3;border-color:#bbf7d0;color:#166534}
@@ -148,6 +149,10 @@ button:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none}
 .api-connection-result.testing{background:#eff6ff;border-color:#bfdbfe;color:#1e40af}
 .api-settings-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:18px}
 .api-settings-actions button{padding:11px 16px}
+.api-settings-actions button:disabled{cursor:wait;opacity:.7}
+#testApiConnectionBtn.is-loading{display:inline-flex;align-items:center;gap:8px}
+#testApiConnectionBtn.is-loading::before{content:"";width:14px;height:14px;border:2px solid rgba(255,255,255,.55);border-top-color:#fff;border-radius:50%;animation:api-spin .8s linear infinite}
+@keyframes api-spin{to{transform:rotate(360deg)}}
 button.danger-quiet{margin-left:auto;background:#fff;color:#b91c1c;border:1px solid #fecaca}
 button.danger{background:#b91c1c}
 .delete-credential-confirm{margin-top:14px;padding:14px;border:1px solid #fecaca;border-radius:13px;background:#fef2f2;color:#991b1b}

@@ -16,6 +16,19 @@ from app.workflow.engine import WorkflowEngine
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
+def test_save_settings_refreshes_modal_and_home_status_independently_from_test() -> None:
+    source = (PROJECT_ROOT / "streamlit_app.py").read_text(encoding="utf-8")
+
+    save_branch = source.split('elif trigger_name == "save_api_settings":', 1)[1].split(
+        'elif trigger_name == "delete_api_credentials":', 1
+    )[0]
+    assert 'ui["api_settings_open"] = True' in save_branch
+    assert 'ui["api_settings_force_close"] = False' in save_branch
+    assert 'ui["api_connection_result"] = None' in save_branch
+    assert "弹窗与主页服务状态已更新" in save_branch
+    assert "测试时输入的 Key 不会自动保存" in save_branch
+
+
 def _snapshot():
     return WorkflowEngine().start(
         run_id="run_12345678",

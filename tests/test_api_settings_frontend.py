@@ -134,6 +134,29 @@ def test_api_settings_events_preserve_readiness_and_demo_contract() -> None:
     assert "testApiConnection(false, event.currentTarget)" in javascript
     assert "testApiConnection(true, event.currentTarget)" in javascript
     assert "advanced_image_test: advancedImageTest" in javascript
+    assert "连接测试已通过，但 API Key 尚未保存" in javascript
+    assert "正在保存 API 设置并更新主页状态" in javascript
+
+
+def test_connection_loading_is_visible_before_streamlit_trigger() -> None:
+    javascript = (FRONTEND / "component.js").read_text(encoding="utf-8")
+    stylesheet = (FRONTEND / "component.css").read_text(encoding="utf-8")
+
+    test_function = javascript.split(
+        "const testApiConnection = (advancedImageTest, sourceElement) => {", 1
+    )[1].split("\n  };", 1)[0]
+    assert test_function.index("setApiTestLoading(true") < test_function.index(
+        "emitTrigger("
+    )
+    assert 'testApiConnectionBtn.textContent = loading ? "连接测试中…"' in javascript
+    assert 'button.setAttribute("aria-busy"' in javascript
+    assert 'apiCredentialNote.textContent = advancedImageTest' in javascript
+    assert "正在测试 API 连接，请保持页面打开…" in javascript
+    assert 'apiCredentialNote.classList.add("testing")' in javascript
+    assert "10–90 秒" in javascript
+    assert "#testApiConnectionBtn.is-loading::before" in stylesheet
+    assert ".api-credential-note.testing" in stylesheet
+    assert "@keyframes api-spin" in stylesheet
 
 
 def test_credential_actions_clear_only_after_duplicate_renderer_listeners() -> None:
@@ -144,7 +167,7 @@ def test_credential_actions_clear_only_after_duplicate_renderer_listeners() -> N
     assert javascript.count("clearCredentialAfterAction();") == 3
 
     test_handler = javascript.split(
-        'listen(query("#testApiConnectionBtn"), "click", (event) => {', 1
+        'listen(testApiConnectionBtn, "click", (event) => {', 1
     )[1].split("});", 1)[0]
     assert test_handler.index("testApiConnection") < test_handler.index(
         "clearCredentialAfterAction"

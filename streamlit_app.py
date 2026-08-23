@@ -262,6 +262,7 @@ demo_assets = controller.bootstrap_demo_assets()
 ui = ensure_ui_state(st.session_state)
 for key, default in {
     "api_settings_open": False,
+    "api_settings_force_close": False,
     "api_connection_result": None,
     "api_settings_result": None,
     "api_demo_selected": False,
@@ -662,6 +663,7 @@ component_data: dict[str, Any] = {
     "api_settings": {
         **api_settings_view,
         "open": bool(ui.get("api_settings_open")),
+        "force_close": bool(ui.get("api_settings_force_close")),
     },
     "api_readiness": api_readiness,
     "api_connection_result": ui.get("api_connection_result"),
@@ -763,6 +765,7 @@ for trigger_name in (*TRIGGER_KEYS, "advance_request"):
     try:
         if trigger_name == "open_api_settings":
             ui["api_settings_open"] = True
+            ui["api_settings_force_close"] = False
             ui["api_settings_result"] = None
 
         elif trigger_name == "close_api_settings":
@@ -799,8 +802,18 @@ for trigger_name in (*TRIGGER_KEYS, "advance_request"):
                 api_key=supplied_api_key,
                 persist_credential=True,
             )
+            if not saved.credential.configured:
+                raise ValueError(
+                    "尚未保存 API Key。测试时输入的 Key 不会自动保存，"
+                    "请重新输入后点击保存设置。"
+                )
             ui["api_demo_selected"] = False
+            # Save and test are independent. Keep the modal open so the user
+            # sees the refreshed credential state while the same rerun also
+            # refreshes the API/service badges behind it.
             ui["api_settings_open"] = True
+            ui["api_settings_force_close"] = False
+            ui["api_connection_result"] = None
             ui["api_settings_result"] = {
                 "ok": True,
                 "message": (
@@ -809,7 +822,7 @@ for trigger_name in (*TRIGGER_KEYS, "advance_request"):
                     else "设置已保存；API Key 仅在当前会话中使用。"
                 ),
             }
-            _notification(ui, "API 设置已保存")
+            _notification(ui, "API 设置已保存；弹窗与主页服务状态已更新")
 
         elif trigger_name == "delete_api_credentials":
             deleted = api_settings_service.delete_credential()
